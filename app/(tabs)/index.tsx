@@ -1,12 +1,17 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { useThemeContext } from '@/hooks/useThemeContext';
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { theme, themeMode, toggleTheme } = useThemeContext();
+  
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -17,9 +22,27 @@ export default function HomeScreen() {
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
+        <ThemedText type="title">Hello World!</ThemedText>
         <HelloWave />
       </ThemedView>
+      
+      {/* Theme Toggle Section */}
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Theme Toggle</ThemedText>
+        <ThemedText>
+          Current theme: <ThemedText type="defaultSemiBold">{theme}</ThemedText> 
+          {themeMode === 'system' && ' (System)'}
+        </ThemedText>
+        <TouchableOpacity 
+          style={styles.themeToggleButton}
+          onPress={toggleTheme}
+        >
+          <ThemedText style={styles.themeToggleButtonText}>
+            Toggle Theme ({themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark'})
+          </ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
+      
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
@@ -51,6 +74,22 @@ export default function HomeScreen() {
           <ThemedText type="defaultSemiBold">app-example</ThemedText>.
         </ThemedText>
       </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <TouchableOpacity 
+          style={styles.onboardingButton}
+          onPress={() => router.push('/onboarding')}
+        >
+          <ThemedText style={styles.onboardingButtonText}>Go to Onboarding</ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <TouchableOpacity 
+          style={styles.onboardingButton}
+          onPress={() => router.push('/typography-preview')}
+        >
+          <ThemedText style={styles.onboardingButtonText}>Go to Typography Preview</ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
@@ -71,5 +110,30 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     position: 'absolute',
+  },
+  onboardingButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  onboardingButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  themeToggleButton: {
+    backgroundColor: '#FFCA62',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  themeToggleButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
