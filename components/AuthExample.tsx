@@ -1,9 +1,10 @@
 import { useAuth, useSignIn, useSignOut, useSignUp } from '@/hooks/useAuth';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
+import { useToast } from '@/hooks/useToast';
 import { useUI } from '@/stores/ui';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export function AuthExample() {
   const [email, setEmail] = useState('');
@@ -18,44 +19,39 @@ export function AuthExample() {
   const router = useRouter();
 
   // Profile hooks
-  const { data: profile, isLoading: profileLoading } = useProfile(user?.id || undefined);
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const updateProfile = useUpdateProfile();
 
   // UI state
   const { isLoading, theme } = useUI();
+  const toast = useToast();
 
   const handleSignIn = async () => {
     try {
       await signIn.mutateAsync({ email, password });
-      Alert.alert('Success', 'Signed in successfully!');
+      toast.success('Signed In', 'Welcome back!');
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      toast.error('Sign In Failed', error.message);
     }
   };
 
   const handleSignUp = async () => {
     try {
       await signUp.mutateAsync({ email, password });
-      Alert.alert('Success', 'Account created! Please check your email.');
+      toast.success('Account Created', 'Please check your email for verification.');
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      toast.error('Sign Up Failed', error.message);
     }
   };
 
   const handleSignOut = async () => {
     try {
       await signOut.mutateAsync();
-      Alert.alert('Success', 'Signed out successfully!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Navigate to login page after signout
-            router.replace('/login');
-          }
-        }
-      ]);
+      toast.success('Signed Out', 'You have been successfully signed out.');
+      // Navigate to login page after signout
+      router.replace('/login');
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      toast.error('Sign Out Failed', error.message);
     }
   };
 
@@ -64,13 +60,12 @@ export function AuthExample() {
     
     try {
       await updateProfile.mutateAsync({
-        userId: user.id,
-        updates: { full_name: fullName }
+        displayName: fullName
       });
-      Alert.alert('Success', 'Profile updated!');
+      toast.success('Profile Updated', 'Your profile has been successfully updated.');
       setFullName('');
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      toast.error('Profile Update Failed', error.message);
     }
   };
 

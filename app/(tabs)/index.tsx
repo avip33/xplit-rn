@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
 import { AuthExample } from '@/components/AuthExample';
 import { HelloWave } from '@/components/HelloWave';
@@ -9,11 +9,13 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useSignOut } from '@/hooks/useAuth';
 import { useThemeContext } from '@/hooks/useThemeContext';
+import { useToast } from '@/hooks/useToast';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme, themeMode, toggleTheme } = useThemeContext();
   const signOut = useSignOut();
+  const toast = useToast();
   
   return (
     <ParallaxScrollView
@@ -83,17 +85,11 @@ export default function HomeScreen() {
           onPress={async () => {
             try {
               await signOut.mutateAsync();
-              Alert.alert('Success', 'Signed out successfully!', [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    // Navigate to login page after signout
-                    router.replace('/login');
-                  }
-                }
-              ]);
+              toast.success('Signed Out', 'You have been successfully signed out.');
+              // Navigate to login page after signout
+              router.replace('/login');
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to sign out');
+              toast.error('Sign Out Failed', error.message || 'Failed to sign out');
             }
           }}
           disabled={signOut.isPending}

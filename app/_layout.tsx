@@ -1,10 +1,10 @@
 import {
-  Lato_100Thin,
-  Lato_300Light,
-  Lato_400Regular,
-  Lato_700Bold,
-  Lato_900Black,
-  useFonts
+    Lato_100Thin,
+    Lato_300Light,
+    Lato_400Regular,
+    Lato_700Bold,
+    Lato_900Black,
+    useFonts
 } from '@expo-google-fonts/lato';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
@@ -13,6 +13,7 @@ import { useColorScheme as useSystemColorScheme } from 'react-native';
 import 'react-native-reanimated';
 
 import { Providers } from '@/app/providers';
+import CustomToast from '@/components/ui/Toast';
 
 export default function RootLayout() {
   const systemColorScheme = useSystemColorScheme();
@@ -39,12 +40,14 @@ export default function RootLayout() {
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false }} />
           <Stack.Screen name="verification" options={{ headerShown: false }} />
+          <Stack.Screen name="profile-setup" options={{ headerShown: false }} />
           <Stack.Screen name="callback" options={{ headerShown: false }} />
           <Stack.Screen name="test-verification" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />
+        <CustomToast />
       </NavigationThemeProvider>
     </Providers>
   );

@@ -1,11 +1,10 @@
-import { useClients } from "@/app/providers";
+import { supabase } from "@/lib/supabase";
 import { useUI } from "@/stores/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
 // Auth state query
 export function useAuth() {
-  const { supabase } = useClients();
   const { setIsAuthenticated } = useUI();
 
   const query = useQuery({
@@ -37,7 +36,6 @@ export function useAuth() {
 
 // Sign in mutation
 export function useSignIn() {
-  const { supabase } = useClients();
   const queryClient = useQueryClient();
   const { setIsLoading } = useUI();
 
@@ -62,7 +60,6 @@ export function useSignIn() {
 
 // Sign up mutation
 export function useSignUp() {
-  const { supabase } = useClients();
   const { setIsLoading } = useUI();
 
   return useMutation({
@@ -86,7 +83,6 @@ export function useSignUp() {
 
 // Sign out mutation
 export function useSignOut() {
-  const { supabase } = useClients();
   const queryClient = useQueryClient();
   const { setIsAuthenticated, setIsLoading } = useUI();
 
@@ -108,7 +104,6 @@ export function useSignOut() {
 
 // Password reset mutation
 export function usePasswordReset() {
-  const { supabase } = useClients();
   const { setIsLoading } = useUI();
 
   return useMutation({
