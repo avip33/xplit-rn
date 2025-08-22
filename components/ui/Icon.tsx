@@ -1,16 +1,20 @@
 // components/Icon.tsx
+import ArrowLeft from '@/assets/icons/arrow-left.svg';
 import ArrowRight from '@/assets/icons/arrow-right.svg';
 import Checkmark from '@/assets/icons/checkmark.svg';
 import EyeOff from '@/assets/icons/eye-off.svg';
 import Eye from '@/assets/icons/eye.svg';
+import Mail from '@/assets/icons/mail.svg';
 import { useThemeColor } from '@/hooks/useThemeColor'; // <-- same hook you used elsewhere
 import React from 'react';
 
 const MAP = {
+  arrowLeft: ArrowLeft,
   arrowRight: ArrowRight,
   checkmark: Checkmark,
   eye: Eye,
   eyeOff: EyeOff,
+  mail: Mail,
 } as const;
 
 export type IconName = keyof typeof MAP;

@@ -1,16 +1,19 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
+import { Alert, StyleSheet, TouchableOpacity } from 'react-native';
 
+import { AuthExample } from '@/components/AuthExample';
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { useSignOut } from '@/hooks/useAuth';
 import { useThemeContext } from '@/hooks/useThemeContext';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme, themeMode, toggleTheme } = useThemeContext();
+  const signOut = useSignOut();
   
   return (
     <ParallaxScrollView
@@ -42,38 +45,7 @@ export default function HomeScreen() {
           </ThemedText>
         </TouchableOpacity>
       </ThemedView>
-      
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
+
       <ThemedView style={styles.stepContainer}>
         <TouchableOpacity 
           style={styles.onboardingButton}
@@ -89,6 +61,56 @@ export default function HomeScreen() {
         >
           <ThemedText style={styles.onboardingButtonText}>Go to Typography Preview</ThemedText>
         </TouchableOpacity>
+      </ThemedView>
+
+      {/* Test Verification Button - Only in development */}
+      {__DEV__ && (
+        <ThemedView style={styles.stepContainer}>
+          <TouchableOpacity 
+            style={styles.testButton}
+            onPress={() => router.push('/test-verification')}
+          >
+            <ThemedText style={styles.testButtonText}>🧪 Test Email Verification</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+      )}
+      
+      {/* Sign Out Section */}
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Account</ThemedText>
+        <TouchableOpacity 
+          style={styles.signOutButton}
+          onPress={async () => {
+            try {
+              await signOut.mutateAsync();
+              Alert.alert('Success', 'Signed out successfully!', [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    // Navigate to login page after signout
+                    router.replace('/login');
+                  }
+                }
+              ]);
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to sign out');
+            }
+          }}
+          disabled={signOut.isPending}
+        >
+          <ThemedText style={styles.signOutButtonText}>
+            {signOut.isPending ? 'Signing Out...' : 'Sign Out'}
+          </ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
+      
+      {/* Auth Example Section */}
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Authentication Example</ThemedText>
+        <ThemedText>
+          This demonstrates the new architecture with TanStack Query, Zustand, and Supabase.
+        </ThemedText>
+        <AuthExample />
       </ThemedView>
     </ParallaxScrollView>
   );
@@ -133,6 +155,30 @@ const styles = StyleSheet.create({
   },
   themeToggleButtonText: {
     color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  signOutButton: {
+    backgroundColor: '#FF3B30',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  signOutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  testButton: {
+    backgroundColor: '#FF9500',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },

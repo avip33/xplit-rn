@@ -12,7 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme as useSystemColorScheme } from 'react-native';
 import 'react-native-reanimated';
 
-import { ThemeProvider } from '@/hooks/useThemeContext';
+import { Providers } from '@/app/providers';
 
 export default function RootLayout() {
   const systemColorScheme = useSystemColorScheme();
@@ -31,17 +31,21 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
+    <Providers>
       <NavigationThemeProvider value={systemColorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="splash" options={{ headerShown: false }} />
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false }} />
+          <Stack.Screen name="verification" options={{ headerShown: false }} />
+          <Stack.Screen name="callback" options={{ headerShown: false }} />
+          <Stack.Screen name="test-verification" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />
       </NavigationThemeProvider>
-    </ThemeProvider>
+    </Providers>
   );
 }

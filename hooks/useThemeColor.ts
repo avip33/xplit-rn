@@ -16,6 +16,11 @@ export function useThemeColor(
   if (colorFromProps) {
     return colorFromProps;
   } else {
-    return Colors[theme][colorName];
+    const color = Colors[theme][colorName];
+    // Handle nested objects (like neutral palette)
+    if (typeof color === 'object') {
+      return color[100] || '#000000'; // Default fallback
+    }
+    return color;
   }
 }

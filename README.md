@@ -1,6 +1,15 @@
-# Welcome to your Expo app 👋
+# Xplit - Modern React Native App with Supabase
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This is a modern [Expo](https://expo.dev) project with **TanStack Query**, **Zustand**, and **Supabase** integration for scalable state management and backend services.
+
+## Architecture
+
+- **TanStack Query** - Server state management (Supabase data)
+- **Zustand** - Local/UI state with persistence
+- **Context API** - Stable app-wide configuration
+- **Supabase** - Backend as a Service with real-time features
+
+## Quick Start
 
 ## Get started
 
@@ -10,10 +19,24 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Set up environment variables
 
    ```bash
-   npx expo start
+   npm run setup-env
+   ```
+
+   Or manually create a `.env` file with your Supabase credentials (see `env.example`).
+
+3. Set up your Supabase database
+
+   - Create a new project at [supabase.com](https://supabase.com)
+   - Run the SQL from `ARCHITECTURE.md` to create the required tables
+   - Enable Row Level Security and set up policies
+
+4. Start the app
+
+   ```bash
+   npm start
    ```
 
 In the output, you'll find options to open the app in a
@@ -24,6 +47,22 @@ In the output, you'll find options to open the app in a
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+
+## Features
+
+- 🔐 **Authentication** - Complete sign up/sign in flow with Supabase Auth
+- 👤 **Profile Management** - User profiles with real-time updates
+- 🎨 **Theme Support** - Light/dark mode with system preference
+- 📱 **Cross Platform** - Works on iOS, Android, and Web
+- ⚡ **Real-time** - Live updates with Supabase subscriptions
+- 💾 **Offline Support** - TanStack Query caching and Zustand persistence
+
+## Documentation
+
+- [Architecture Guide](ARCHITECTURE.md) - Detailed setup and usage instructions
+- [Supabase Setup](https://supabase.com/docs) - Backend configuration
+- [TanStack Query](https://tanstack.com/query/latest) - Server state management
+- [Zustand](https://github.com/pmndrs/zustand) - State management
 
 ## Get a fresh project
 

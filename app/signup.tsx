@@ -1,9 +1,12 @@
+import { useClients } from '@/app/providers';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
+import { useSignUp } from '@/hooks/useAuth';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useUI } from '@/stores/ui';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -22,12 +25,15 @@ import {
 const { width, height } = Dimensions.get('window');
 
 export default function SignupScreen() {
-  const [email, setEmail] = useState('lehieuds@gmail.com');
-  const [password, setPassword] = useState('••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isEmailValid, setIsEmailValid] = useState(true);
   
   const router = useRouter();
+  const { setEmailForVerification } = useUI();
+  const signUpMutation = useSignUp();
+  const { supabase } = useClients();
 
   // Theme-aware colors
   const backgroundColor = useThemeColor({}, 'background') as string;
@@ -61,7 +67,7 @@ export default function SignupScreen() {
     setShowPassword(!showPassword);
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (!validateEmail(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
@@ -72,15 +78,94 @@ export default function SignupScreen() {
       return;
     }
 
-    // TODO: Integrate with Supabase
-    console.log('Signup with:', { email, password });
-    Alert.alert('Success', 'Account created successfully!');
-    router.replace('/(tabs)');
+    try {
+      console.log('Attempting signup with email:', email);
+      
+      // Check if there's already a user logged in
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser && currentUser.email === email) {
+        console.log('User is already logged in with this email');
+        Alert.alert(
+          'Already Logged In', 
+          'You are already logged in with this email address.',
+          [
+            { text: 'OK', style: 'default' },
+            { text: 'Go to App', onPress: () => router.replace('/(tabs)') }
+          ]
+        );
+        return;
+      }
+      
+      // Note: We removed the dummy sign-in check as it was causing false positives
+      // Supabase will handle existing email detection during signup
+      
+      const result = await signUpMutation.mutateAsync({ email, password });
+      
+      console.log('Signup result:', result);
+      
+      // Check if we have a session (user is logged in)
+      if (result.session) {
+        console.log('User has session - they are logged in');
+        // This means the user was successfully signed up and logged in
+        if (!result.user?.email_confirmed_at) {
+          // User needs to verify email
+          setEmailForVerification(email);
+          router.push('/verification');
+        } else {
+          // User is already verified
+          router.replace('/(tabs)');
+        }
+      } else if (result.user && !result.session) {
+        console.log('User created but no session - needs email confirmation');
+        
+        // If user was created and confirmation was sent, proceed to verification
+        // This handles both fresh signups and cases where user was deleted but residual data exists
+        console.log('User created, proceeding to verification');
+        
+        // User was created but needs email confirmation
+        setEmailForVerification(email);
+        router.push('/verification');
+      } else {
+        console.log('No user or session returned');
+        Alert.alert('Signup Error', 'Failed to create account. Please try again.');
+      }
+    } catch (error: any) {
+      console.log('Signup error:', error);
+      console.log('Error message:', error.message);
+      console.log('Error status:', error.status);
+      
+      // Handle specific Supabase errors
+      const errorMessage = error.message?.toLowerCase() || '';
+      console.log('Full error object:', error);
+      
+      const isExistingEmail = 
+        errorMessage.includes('already registered') || 
+        errorMessage.includes('already exists') ||
+        errorMessage.includes('user already registered') ||
+        errorMessage.includes('email already in use') ||
+        errorMessage.includes('duplicate key') ||
+        errorMessage.includes('unique constraint') ||
+        error?.status === 422 || // Supabase often returns 422 for existing email
+        error?.code === '23505' || // PostgreSQL unique constraint violation
+        error?.code === '23514'; // PostgreSQL check constraint violation
+      
+      if (isExistingEmail) {
+        Alert.alert(
+          'Email Already Exists', 
+          'An account with this email already exists. Please try logging in instead.',
+          [
+            { text: 'OK', style: 'default' },
+            { text: 'Go to Login', onPress: handleLogin }
+          ]
+        );
+      } else {
+        Alert.alert('Signup Error', error.message || 'Failed to create account. Please try again.');
+      }
+    }
   };
 
   const handleLogin = () => {
-    // TODO: Navigate to login screen
-    console.log('Navigate to login');
+    router.push('/login');
   };
 
   const handleTermsOfUse = () => {
@@ -171,9 +256,15 @@ export default function SignupScreen() {
         </View>
 
         {/* Signup Button */}
-        <TouchableOpacity onPress={handleSignup} style={styles.signupButton}>
-          <Text style={styles.signupButtonText}>Join Xplit!</Text>
-          <Icon name="arrowRight" size={16} color="#333" />
+        <TouchableOpacity 
+          onPress={handleSignup} 
+          style={[styles.signupButton, { opacity: signUpMutation.isPending ? 0.6 : 1 }]}
+          disabled={signUpMutation.isPending}
+        >
+          <Text style={styles.signupButtonText}>
+            {signUpMutation.isPending ? 'Creating Account...' : 'Join Xplit!'}
+          </Text>
+          {!signUpMutation.isPending && <Icon name="arrowRight" size={16} color="#333" />}
         </TouchableOpacity>
 
         {/* Terms and Privacy */}
