@@ -25,6 +25,8 @@ const PUBLIC_ROUTES = new Set([
   '/callback',
   '/splash',
   '/onboarding',
+  '/forgot-password',
+  '/reset-password',
 ]);
 
 function AuthGuard() {
