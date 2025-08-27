@@ -7,14 +7,14 @@ import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useSignOut } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useThemeContext } from '@/hooks/useThemeContext';
 import { useToast } from '@/hooks/useToast';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme, themeMode, toggleTheme } = useThemeContext();
-  const signOut = useSignOut();
+  const { signOut, isSigningOut } = useAuth();
   const toast = useToast();
   
   return (
@@ -84,18 +84,20 @@ export default function HomeScreen() {
           style={styles.signOutButton}
           onPress={async () => {
             try {
-              await signOut.mutateAsync();
+              await signOut();
               toast.success('Signed Out', 'You have been successfully signed out.');
               // Navigate to login page after signout
               router.replace('/login');
             } catch (error: any) {
-              toast.error('Sign Out Failed', error.message || 'Failed to sign out');
+              // Show user-friendly error message instead of technical database error
+              toast.error('Sign Out Failed', 'Unable to sign out. Please try again.');
+              console.error('Sign out error:', error);
             }
           }}
-          disabled={signOut.isPending}
+          disabled={isSigningOut}
         >
           <ThemedText style={styles.signOutButtonText}>
-            {signOut.isPending ? 'Signing Out...' : 'Sign Out'}
+            {isSigningOut ? 'Signing Out...' : 'Sign Out'}
           </ThemedText>
         </TouchableOpacity>
       </ThemedView>

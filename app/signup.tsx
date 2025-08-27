@@ -1,10 +1,11 @@
-import { useClients } from '@/app/providers';
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
-import { useSignUp } from '@/hooks/useAuth';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { signUpEmail } from '@/lib/features/auth/api';
+import { getSupabase } from '@/lib/supabase';
 import { useUI } from '@/stores/ui';
+import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -32,8 +33,30 @@ export default function SignupScreen() {
   
   const router = useRouter();
   const { setEmailForVerification } = useUI();
-  const signUpMutation = useSignUp();
-  const { supabase } = useClients();
+  
+  const signUpMutation = useMutation({
+    mutationFn: ({ email, password }: { email: string; password: string }) =>
+      signUpEmail(email, password),
+    onSuccess: async (data) => {
+  
+      if (data.user) {
+        if (!data.user.email_confirmed_at) {
+          setEmailForVerification(data.user.email || null);
+          router.replace('/verification');
+        } else {
+          checkUserProfileAndRoute();
+        }
+      } else {
+        console.error('No user data in signup response');
+        router.replace('/verification');
+      }
+    },
+    onError: (error) => {
+      console.error('Signup error:', error);
+      Alert.alert('Signup Error', (error as any).message || 'An error occurred during signup');
+    },
+  });
+  
 
   // Theme-aware colors
   const backgroundColor = useThemeColor({}, 'background') as string;
@@ -67,6 +90,32 @@ export default function SignupScreen() {
     setShowPassword(!showPassword);
   };
 
+  // Function to check if user has a profile and route accordingly
+  const checkUserProfileAndRoute = async () => {
+    try {
+      // Check if user has a profile
+      const supabase = await getSupabase();
+      const { data: hasProfile, error: profileError } = await supabase.rpc('user_has_profile');
+      
+      if (profileError) {
+        console.error('Error checking user profile:', profileError);
+        // If we can't check profile, assume they need to create one
+        router.replace('/profile-setup');
+        return;
+      }
+      
+      if (hasProfile) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/profile-setup');
+      }
+    } catch (error) {
+      console.error('Error in checkUserProfileAndRoute:', error);
+      // Fallback to profile setup
+      router.replace('/profile-setup');
+    }
+  };
+
   const handleSignup = async () => {
     if (!validateEmail(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
@@ -79,12 +128,11 @@ export default function SignupScreen() {
     }
 
     try {
-      console.log('Attempting signup with email:', email);
       
       // Check if there's already a user logged in
+      const supabase = await getSupabase();
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser && currentUser.email === email) {
-        console.log('User is already logged in with this email');
         Alert.alert(
           'Already Logged In', 
           'You are already logged in with this email address.',
@@ -96,47 +144,12 @@ export default function SignupScreen() {
         return;
       }
       
-      // Note: We removed the dummy sign-in check as it was causing false positives
-      // Supabase will handle existing email detection during signup
-      
-      const result = await signUpMutation.mutateAsync({ email, password });
-      
-      console.log('Signup result:', result);
-      
-      // Check if we have a session (user is logged in)
-      if (result.session) {
-        console.log('User has session - they are logged in');
-        // This means the user was successfully signed up and logged in
-        if (!result.user?.email_confirmed_at) {
-          // User needs to verify email
-          setEmailForVerification(email);
-          router.push('/verification');
-        } else {
-          // User is already verified
-          router.replace('/(tabs)');
-        }
-      } else if (result.user && !result.session) {
-        console.log('User created but no session - needs email confirmation');
-        
-        // If user was created and confirmation was sent, proceed to verification
-        // This handles both fresh signups and cases where user was deleted but residual data exists
-        console.log('User created, proceeding to verification');
-        
-        // User was created but needs email confirmation
-        setEmailForVerification(email);
-        router.push('/verification');
-      } else {
-        console.log('No user or session returned');
-        Alert.alert('Signup Error', 'Failed to create account. Please try again.');
-      }
+      // Use the new mutation
+      signUpMutation.mutate({ email, password });
     } catch (error: any) {
-      console.log('Signup error:', error);
-      console.log('Error message:', error.message);
-      console.log('Error status:', error.status);
       
       // Handle specific Supabase errors
       const errorMessage = error.message?.toLowerCase() || '';
-      console.log('Full error object:', error);
       
       const isExistingEmail = 
         errorMessage.includes('already registered') || 
@@ -305,7 +318,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     flexGrow: 1,
-    justifyContent: 'center',
   },
   loginLink: {
     paddingVertical: 8,

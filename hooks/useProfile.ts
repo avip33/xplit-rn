@@ -1,5 +1,5 @@
 import { createProfileOnce, searchProfiles, updateProfile, uploadAvatar } from "@/lib/features/profile";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./useAuth";
 
@@ -12,6 +12,8 @@ export function useProfile() {
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+      
+      const supabase = await getSupabase();
       
       // First check if user has a profile
       const { data: hasProfile, error: checkError } = await supabase.rpc('user_has_profile');

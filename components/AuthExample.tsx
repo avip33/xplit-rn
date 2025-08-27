@@ -1,4 +1,4 @@
-import { useAuth, useSignIn, useSignOut, useSignUp } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/useToast';
 import { useUI } from '@/stores/ui';
@@ -12,10 +12,7 @@ export function AuthExample() {
   const [fullName, setFullName] = useState('');
 
   // Auth hooks
-  const { data: user, isLoading: authLoading } = useAuth();
-  const signIn = useSignIn();
-  const signUp = useSignUp();
-  const signOut = useSignOut();
+  const { user, isLoading: authLoading, signIn, signUp, signOut, isSigningIn, isSigningUp, isSigningOut } = useAuth();
   const router = useRouter();
 
   // Profile hooks
@@ -28,30 +25,36 @@ export function AuthExample() {
 
   const handleSignIn = async () => {
     try {
-      await signIn.mutateAsync({ email, password });
+      await signIn({ email, password });
       toast.success('Signed In', 'Welcome back!');
     } catch (error: any) {
-      toast.error('Sign In Failed', error.message);
+      // Show user-friendly error message instead of technical database error
+      toast.error('Sign In Failed', 'Invalid email or password. Please try again.');
+      console.error('Sign in error:', error);
     }
   };
 
   const handleSignUp = async () => {
     try {
-      await signUp.mutateAsync({ email, password });
+      await signUp({ email, password });
       toast.success('Account Created', 'Please check your email for verification.');
     } catch (error: any) {
-      toast.error('Sign Up Failed', error.message);
+      // Show user-friendly error message instead of technical database error
+      toast.error('Sign Up Failed', 'Unable to create account. Please try again.');
+      console.error('Sign up error:', error);
     }
   };
 
   const handleSignOut = async () => {
     try {
-      await signOut.mutateAsync();
+      await signOut();
       toast.success('Signed Out', 'You have been successfully signed out.');
       // Navigate to login page after signout
       router.replace('/login');
     } catch (error: any) {
-      toast.error('Sign Out Failed', error.message);
+      // Show user-friendly error message instead of technical database error
+      toast.error('Sign Out Failed', 'Unable to sign out. Please try again.');
+      console.error('Sign out error:', error);
     }
   };
 
@@ -65,7 +68,9 @@ export function AuthExample() {
       toast.success('Profile Updated', 'Your profile has been successfully updated.');
       setFullName('');
     } catch (error: any) {
-      toast.error('Profile Update Failed', error.message);
+      // Show user-friendly error message instead of technical database error
+      toast.error('Profile Update Failed', 'Unable to update profile. Please try again.');
+      console.error('Profile update error:', error);
     }
   };
 

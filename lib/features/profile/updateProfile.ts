@@ -1,10 +1,11 @@
-import { supabase } from '../../supabase';
+import { getSupabase } from '../../supabase';
 
 export async function updateProfile(opts: { 
   displayName?: string; 
   bio?: string; 
   avatarUrl?: string 
 }) {
+  const supabase = await getSupabase();
   const { data, error } = await supabase.rpc('update_profile', {
     p_display_name: opts.displayName ?? null,
     p_bio: opts.bio ?? null,

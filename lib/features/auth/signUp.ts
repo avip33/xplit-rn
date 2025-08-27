@@ -1,7 +1,8 @@
-import { supabase } from '../../supabase';
+import { getSupabase } from '../../supabase';
 
 // Sign up with password OR use magic link (signInWithOtp) if you prefer
 export async function signUpWithEmail(email: string, password: string) {
+  const supabase = await getSupabase();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -15,6 +16,7 @@ export async function signUpWithEmail(email: string, password: string) {
 
 // Alternative: Sign up with magic link (no password required)
 export async function signUpWithMagicLink(email: string) {
+  const supabase = await getSupabase();
   const { data, error } = await supabase.auth.signInWithOtp({
     email,
     options: {
@@ -23,4 +25,4 @@ export async function signUpWithMagicLink(email: string) {
   });
   if (error) throw error;
   return data;
-}
+} 

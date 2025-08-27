@@ -2,17 +2,18 @@ import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useUI } from '@/stores/ui';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-  Dimensions,
-  ImageBackground,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Dimensions,
+    ImageBackground,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -41,6 +42,7 @@ const onboardingScreens: OnboardingScreen[] = [
 export default function Onboarding() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const router = useRouter();
+  const { setOnboardingDone } = useUI();
 
   // Theme-aware colors
   const backgroundColor = useThemeColor({}, 'background') as string;
@@ -54,18 +56,22 @@ export default function Onboarding() {
     if (currentIndex < onboardingScreens.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Navigate to signup screen
+      // Mark onboarding as complete and navigate to signup screen
+      setOnboardingDone(true);
       router.push('/signup');
     }
   };
 
   const handleSkip = () => {
+    // Mark onboarding as complete and navigate to signup screen
+    setOnboardingDone(true);
     router.push('/signup');
   };
 
   const handleLogin = () => {
-    // Navigate to login screen or handle login
-    console.log('Login pressed');
+    // Mark onboarding as complete and navigate to login screen
+    setOnboardingDone(true);
+    router.push('/login');
   };
 
   return (

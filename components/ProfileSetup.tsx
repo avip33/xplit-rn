@@ -30,8 +30,8 @@ export default function ProfileSetup() {
   const [handleError, setHandleError] = useState('');
   
   const router = useRouter();
-  const { data: user } = useAuth();
-  const { setIsLoading } = useUI();
+  const { user } = useAuth();
+  const { setIsLoading, setProfileExists } = useUI();
   const createProfile = useCreateProfile();
   const toast = useToast();
 
@@ -86,14 +86,29 @@ export default function ProfileSetup() {
       });
       
       toast.success('Profile Created!', 'Your profile has been successfully created.');
-      
+      setProfileExists(true);
       // Navigate to main app
       router.replace('/(tabs)');
     } catch (error: any) {
-      if (error.message === 'Handle is taken') {
+      // Handle all possible handle-related errors
+      const errorMessage = error.message?.toLowerCase() || '';
+      const errorCode = error.code || '';
+      
+      const isHandleTaken = 
+        error.message === 'Handle is taken' ||
+        errorMessage.includes('handle') && errorMessage.includes('taken') ||
+        errorMessage.includes('already exists') ||
+        errorMessage.includes('duplicate key') ||
+        errorMessage.includes('unique constraint') ||
+        errorCode === '23505' || // PostgreSQL unique constraint violation
+        errorMessage.includes('violates unique constraint');
+      
+      if (isHandleTaken) {
         setHandleError('This handle is already taken. Please choose another one.');
       } else {
-        toast.error('Profile Creation Failed', error.message || 'Failed to create profile');
+        // For other errors, show a generic user-friendly message
+        toast.error('Profile Creation Failed', 'Unable to create profile. Please try again.');
+        console.error('Profile creation error:', error);
       }
     } finally {
       setIsLoading(false);

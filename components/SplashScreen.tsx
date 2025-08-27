@@ -1,122 +1,189 @@
 // app/splash.tsx (or wherever this screen lives)
-import { Fonts } from '@/constants/Fonts';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Animated,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect } from 'react';
+import { Animated, Dimensions, StyleSheet, View } from 'react-native';
+import { useAuth } from '../hooks/useAuth';
+import { useUI } from '../stores/ui';
+import { ThemedText } from './ThemedText';
+import { ThemedView } from './ThemedView';
+
+const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();
-
-  // Persist animated values across renders
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-
-  // Respect users who prefer reduced motion
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const { user, isInitialized, isLoading } = useAuth();
+  const { onboardingDone } = useUI();
+  
+  // Animation values
+  const logoScale = new Animated.Value(0.8);
+  const logoOpacity = new Animated.Value(0);
+  const textOpacity = new Animated.Value(0);
+  const dotOpacity = new Animated.Value(0);
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
-    const sub = AccessibilityInfo.addEventListener(
-      'reduceMotionChanged',
-      setReduceMotion
-    );
-    return () => sub?.remove?.();
+    // Start animations
+    Animated.parallel([
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoScale, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animate text after logo
+    Animated.sequence([
+      Animated.delay(400),
+      Animated.timing(textOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Animate loading dots
+    Animated.sequence([
+      Animated.delay(800),
+      Animated.timing(dotOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   useEffect(() => {
-    if (reduceMotion) {
-      // Snap to end state without animation
-      fadeAnim.setValue(1);
-      scaleAnim.setValue(1);
-    } else {
-      // Animate the splash screen
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
+    // Don't proceed if still loading or not initialized
+    if (isLoading || !isInitialized) return;
 
-    // Navigate to onboarding after 2.5s
-    const timer = setTimeout(() => {
-      router.replace('/onboarding');
-    }, 2500);
+    const checkUserProfileAndRoute = async () => {
+      try {
+        if (user) {
+          // For now, just redirect to tabs if user is authenticated
+          // We'll add profile checking later once the basic flow works
+          router.replace('/(tabs)');
+        } else {
+          // User is not authenticated
+          if (onboardingDone) {
+            router.replace('/login');
+          } else {
+            router.replace('/onboarding');
+          }
+        }
+      } catch (error) {
+        console.error('Error in routing logic:', error);
+        // Fallback routing
+        if (user) {
+          router.replace('/(tabs)');
+        } else {
+          router.replace('/onboarding');
+        }
+      }
+    };
+
+    // Add a small delay to show the splash screen
+    const timer = setTimeout(checkUserProfileAndRoute, 2000);
 
     return () => clearTimeout(timer);
-  }, [fadeAnim, scaleAnim, reduceMotion, router]);
+  }, [isInitialized, isLoading, user, onboardingDone, router]);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#007AFF" />
+    <ThemedView style={styles.container}>
+      {/* Logo */}
       <Animated.View
         style={[
-          styles.content,
-          { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+          styles.logoContainer,
+          {
+            opacity: logoOpacity,
+            transform: [{ scale: logoScale }],
+          },
         ]}
       >
-        <View style={styles.logoContainer}>
-          <Text style={styles.logo}>Xplit</Text>
-          <Text style={styles.tagline}>Split expenses, not friendships</Text>
-        </View>
-
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingDots}>
-            <View style={[styles.dot, styles.dot1]} />
-            <View style={[styles.dot, styles.dot2]} />
-            <View style={[styles.dot, styles.dot3]} />
-          </View>
+        <View style={styles.logo}>
+          <ThemedText style={styles.logoText}>Xplit</ThemedText>
         </View>
       </Animated.View>
-    </View>
+
+      {/* App Name */}
+      <Animated.View style={[styles.textContainer, { opacity: textOpacity }]}>
+        <ThemedText style={styles.appName}>Welcome to Xplit</ThemedText>
+        <ThemedText style={styles.tagline}>Split expenses with friends</ThemedText>
+      </Animated.View>
+
+      {/* Loading Dots */}
+      <Animated.View style={[styles.loadingContainer, { opacity: dotOpacity }]}>
+        <View style={styles.dots}>
+          <View style={[styles.dot, styles.dot1]} />
+          <View style={[styles.dot, styles.dot2]} />
+          <View style={[styles.dot, styles.dot3]} />
+        </View>
+      </Animated.View>
+
+      {/* Fallback loading indicator */}
+      {isLoading && (
+        <View style={styles.fallbackContainer}>
+          <ThemedText style={styles.fallbackText}>Loading...</ThemedText>
+        </View>
+      )}
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  content: {
-    alignItems: 'center',
+    paddingHorizontal: 40,
   },
   logoContainer: {
-    alignItems: 'center',
     marginBottom: 60,
   },
   logo: {
-    fontSize: Fonts.sizes['5xl'],
-    fontFamily: Fonts.avenir.black, // iOS: Avenir-Black, Android: Lato_900Black
-    color: '#fff',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  logoText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  textContainer: {
+    alignItems: 'center',
+    marginBottom: 80,
+  },
+  appName: {
+    fontSize: 28,
+    fontWeight: 'bold',
     marginBottom: 8,
+    textAlign: 'center',
   },
   tagline: {
-    fontSize: Fonts.sizes.base,
-    fontFamily: Fonts.avenir.medium, // iOS: Avenir-Medium, Android: Lato_700Bold
-    color: '#fff',
-    opacity: 0.9,
+    fontSize: 16,
+    opacity: 0.7,
     textAlign: 'center',
   },
   loadingContainer: {
-    alignItems: 'center',
+    position: 'absolute',
+    bottom: 100,
   },
-  loadingDots: {
+  dots: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -124,10 +191,25 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#fff',
     marginHorizontal: 4,
+    backgroundColor: '#007AFF',
   },
-  dot1: { opacity: 0.4 },
-  dot2: { opacity: 0.7 },
-  dot3: { opacity: 1 },
+  dot1: {
+    animationDelay: '0ms',
+  },
+  dot2: {
+    animationDelay: '200ms',
+  },
+  dot3: {
+    animationDelay: '400ms',
+  },
+  fallbackContainer: {
+    position: 'absolute',
+    top: '50%',
+    transform: [{ translateY: -20 }],
+  },
+  fallbackText: {
+    fontSize: 18,
+    color: '#888',
+  },
 });

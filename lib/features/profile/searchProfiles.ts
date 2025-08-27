@@ -1,6 +1,7 @@
-import { supabase } from '../../supabase';
+import { getSupabase } from '../../supabase';
 
 export async function searchProfiles(q: string, limit = 20) {
+  const supabase = await getSupabase();
   const { data, error } = await supabase.rpc('search_profiles', { q, limit_count: limit });
   if (error) throw error;
   return data as Array<{ 

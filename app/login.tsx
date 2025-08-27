@@ -1,8 +1,9 @@
 import { Icon } from '@/components/ui/Icon';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
-import { useSignIn } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { getSupabase } from '@/lib/supabase';
 import { useUI } from '@/stores/ui';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -29,8 +30,8 @@ export default function LoginScreen() {
   const [isEmailValid, setIsEmailValid] = useState(true);
   
   const router = useRouter();
+  const { signIn, isSigningIn } = useAuth();
   const { setEmailForVerification } = useUI();
-  const signInMutation = useSignIn();
 
   // Theme-aware colors
   const backgroundColor = useThemeColor({}, 'background') as string;
@@ -64,6 +65,32 @@ export default function LoginScreen() {
     setShowPassword(!showPassword);
   };
 
+  // Function to check if user has a profile and route accordingly
+  const checkUserProfileAndRoute = async () => {
+    try {
+      // Check if user has a profile
+      const supabase = await getSupabase();
+      const { data: hasProfile, error: profileError } = await supabase.rpc('user_has_profile');
+      
+      if (profileError) {
+        console.error('Error checking user profile:', profileError);
+        // If we can't check profile, assume they need to create one
+        router.replace('/profile-setup');
+        return;
+      }
+      
+      if (hasProfile) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/profile-setup');
+      }
+    } catch (error) {
+      console.error('Error in checkUserProfileAndRoute:', error);
+      // Fallback to profile setup
+      router.replace('/profile-setup');
+    }
+  };
+
   const handleLogin = async () => {
     if (!validateEmail(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
@@ -76,16 +103,10 @@ export default function LoginScreen() {
     }
 
     try {
-      const result = await signInMutation.mutateAsync({ email, password });
+      await signIn({ email, password });
       
-      if (result.user && !result.user.email_confirmed_at) {
-        // User needs to verify email
-        setEmailForVerification(email);
-        router.push('/verification');
-      } else {
-        // User is logged in successfully
-        router.replace('/(tabs)');
-      }
+      // Check if user has a profile and route accordingly
+      checkUserProfileAndRoute();
     } catch (error: any) {
       // Handle specific Supabase errors
       const errorMessage = error.message?.toLowerCase() || '';
@@ -109,8 +130,7 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    // TODO: Implement forgot password flow
-    Alert.alert('Forgot Password', 'Password reset functionality will be implemented soon.');
+    router.push('/forgot-password');
   };
 
   return (
@@ -202,11 +222,11 @@ export default function LoginScreen() {
         {/* Login Button */}
         <TouchableOpacity 
           onPress={handleLogin} 
-          style={[styles.loginButton, { opacity: signInMutation.isPending ? 0.6 : 1 }]}
-          disabled={signInMutation.isPending}
+          style={[styles.loginButton, { opacity: isSigningIn ? 0.6 : 1 }]}
+          disabled={isSigningIn}
         >
           <Text style={styles.loginButtonText}>
-            {signInMutation.isPending ? 'Signing In...' : 'Sign In'}
+            {isSigningIn ? 'Signing In...' : 'Sign In'}
           </Text>
           <Icon name="arrowRight" size={16} color="#333" />
         </TouchableOpacity>
@@ -245,7 +265,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     flexGrow: 1,
-    justifyContent: 'center',
   },
   signupLink: {
     paddingVertical: 8,

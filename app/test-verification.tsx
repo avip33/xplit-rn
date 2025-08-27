@@ -1,6 +1,6 @@
-import { useClients } from '@/app/providers';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
+import { getSupabase } from '@/lib/supabase';
 import { useUI } from '@/stores/ui';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -8,13 +8,15 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TestVerificationScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
-  const { supabase } = useClients();
+  // We'll get supabase instance when needed
   const { setEmailForVerification } = useUI();
   const router = useRouter();
 
   const simulateEmailVerification = async () => {
     setIsProcessing(true);
     try {
+      const supabase = await getSupabase();
+      
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
@@ -54,6 +56,8 @@ export default function TestVerificationScreen() {
   const simulateCallbackWithVerifiedUser = async () => {
     setIsProcessing(true);
     try {
+      const supabase = await getSupabase();
+      
       // First verify the user
       const { data: { user } } = await supabase.auth.getUser();
       

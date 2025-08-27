@@ -1,97 +1,137 @@
-import { useClients } from '@/app/providers';
-import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+// app/callback.tsx
+import { profileExists } from '@/lib/features/auth/api';
+import { getSupabase } from '@/lib/supabase';
 import { useUI } from '@/stores/ui';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import * as Linking from 'expo-linking';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 export default function CallbackScreen() {
-  const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { supabase } = useClients();
-  const { setEmailForVerification } = useUI();
+  const processedRef = useRef(false);
   const router = useRouter();
+  const { setAuthResolving, setProfileExists } = useUI();
+
+  // 👇 expo-router parses ?code and ?token for you
+  const params = useLocalSearchParams<{ code?: string | string[]; token?: string | string[] }>();
 
   useEffect(() => {
-    handleAuthCallback();
-  }, []);
+    let sub: { remove: () => void } | null = null;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const handleAuthCallback = async () => {
-    try {
-      console.log('Processing auth callback...');
-      
-      // Wait a moment for Supabase to process the auth state change
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Let the auth state handler in providers.tsx handle the routing
-      // This callback screen just shows a loading state while auth is processed
-      console.log('Auth processing complete, letting auth handler manage routing');
-      
-    } catch (error: any) {
-      console.error('Auth callback error:', error);
-      setError(error.message || 'Authentication failed');
-      
-      // Show error alert and redirect to login
-      Alert.alert(
-        'Authentication Error',
-        error.message || 'Failed to complete authentication. Please try again.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/login')
-          }
-        ]
-      );
-    } finally {
-      setIsProcessing(false);
+    const val = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v);
+
+    const routeNext = async () => {
+      const exists = await profileExists();
+      setProfileExists(exists);
+      router.replace(exists ? '/(tabs)' : '/profile-setup');
+    };
+
+    const tryExchange = async (codeOrToken: string) => {
+      const supabase = await getSupabase();
+
+      // v2 API expects a plain string (PKCE code)
+      const { error } = await supabase.auth.exchangeCodeForSession(codeOrToken);
+      if (error) throw error;
+
+      const after = await supabase.auth.getSession();
+    };
+
+    const handle = async (url: string | null) => {
+      if (processedRef.current) return;
+      if (!url) return; // wait; do not redirect
+      processedRef.current = true;
+
+      setAuthResolving(true);
+      try {
+
+        // Prefer expo-router params, but also parse runtime URL
+        const { queryParams } = Linking.parse(url);
+        const code = val(params.code) || (queryParams?.code as string);
+        const token = val(params.token) || (queryParams?.token as string);
+
+        const codeOrToken = code || token;
+        if (!codeOrToken) {
+          processedRef.current = false; // let fallback check session
+          return;
+        }
+
+        await tryExchange(codeOrToken);
+        await routeNext();
+      } catch (e: any) {
+        console.error('[CALLBACK] error:', e);
+        setError(e?.message ?? 'Could not complete sign-in.');
+      } finally {
+        setAuthResolving(false);
+      }
+    };
+
+    // 1) Fast path: if expo-router already gave us params, try immediately
+    const first = (Array.isArray(params.code) ? params.code[0] : params.code) ||
+                  (Array.isArray(params.token) ? params.token[0] : params.token);
+    if (first && !processedRef.current) {
+      processedRef.current = true;
+      setAuthResolving(true);
+      (async () => {
+        try {
+          await tryExchange(first);
+          await routeNext();
+        } catch (e: any) {
+          console.error('[CALLBACK] direct param error:', e);
+          setError(e?.message ?? 'Could not complete sign-in.');
+        } finally {
+          setAuthResolving(false);
+        }
+      })();
     }
-  };
 
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Authentication Error</Text>
-        <Text style={styles.errorMessage}>{error}</Text>
-      </View>
-    );
-  }
+    // 2) Cold start: may be null initially on iOS — don’t redirect
+    Linking.getInitialURL().then(handle);
+
+    // 3) Warm start
+    sub = Linking.addEventListener('url', (ev) => handle(ev.url));
+
+    // 4) Fallback after 2.5s: if nothing processed, check if a session already exists
+    fallbackTimer = setTimeout(async () => {
+      if (processedRef.current) return;
+      setAuthResolving(true);
+      try {
+        const supabase = await getSupabase();
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          processedRef.current = true;
+          await routeNext();
+          return;
+        }
+      } finally {
+        setAuthResolving(false);
+        if (!processedRef.current) router.replace('/login');
+      }
+    }, 2500);
+
+    return () => {
+      sub?.remove?.();
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      setAuthResolving(false);
+    };
+  }, [params.code, params.token]);
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color={Colors.primary} />
-      <Text style={styles.loadingText}>Completing authentication...</Text>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      {!error ? (
+        <>
+          <ActivityIndicator />
+          <Text>Completing secure sign-in…</Text>
+        </>
+      ) : (
+        <>
+          <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text>
+          <Text onPress={() => router.replace('/login')} style={{ textDecorationLine: 'underline', marginTop: 8 }}>
+            Go to Sign in
+          </Text>
+        </>
+      )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 20,
-    fontSize: Fonts.sizes.lg,
-    fontFamily: Fonts.avenir.medium,
-    color: '#333333',
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: Fonts.sizes.xl,
-    fontFamily: Fonts.avenir.heavy,
-    color: '#FF3B30',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: Fonts.sizes.base,
-    fontFamily: Fonts.avenir.regular,
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: Fonts.sizes.base * Fonts.lineHeights.normal,
-  },
-});
