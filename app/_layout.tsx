@@ -1,3 +1,4 @@
+import "@/global.css";
 import {
   Lato_100Thin,
   Lato_300Light,
@@ -12,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme as useSystemColorScheme } from 'react-native';
 import 'react-native-reanimated';
+
 
 import { Providers } from '@/app/providers';
 import CustomToast from '@/components/ui/Toast';
